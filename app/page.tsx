@@ -28,6 +28,7 @@ export default function ChatPage() {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [passcode, setPasscode] = useState('');
   const [passError, setPassError] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
 
   const [messages, setMessages] = useState<Message[]>([
     { role: 'assistant', content: "Hi my love! ❤️ How is your day going? Tell me everything!" }
@@ -168,7 +169,7 @@ export default function ChatPage() {
     }
   };
 
-  // যদি ইউজার এন্ট্রি কোড না দিয়ে থাকে, তবে পাসওয়ার্ড স্ক্রিন দেখাবে
+  // পাসওয়ার্ড স্ক্রিন
   if (!isAuthenticated) {
     return (
       <main className="min-h-screen bg-slate-950 flex items-center justify-center p-2 font-sans">
@@ -180,14 +181,24 @@ export default function ChatPage() {
           <p className="text-xs text-white/60 mb-6">Please enter your code to access the chat.</p>
 
           <form onSubmit={handleLogin} className="w-full flex flex-col gap-3">
-            <input
-              type="password"
-              value={passcode}
-              onChange={(e) => setPasscode(e.target.value)}
-              placeholder="Enter passcode..."
-              className="w-full bg-slate-950/80 border border-white/20 rounded-full px-4 py-3 text-sm text-center text-white placeholder-white/40 focus:outline-none focus:border-rose-500 shadow-inner tracking-widest"
-              autoFocus
-            />
+            <div className="relative w-full">
+              <input
+                type={showPassword ? "text" : "password"}
+                value={passcode}
+                onChange={(e) => setPasscode(e.target.value)}
+                placeholder="Enter passcode..."
+                className="w-full bg-slate-950/80 border border-white/20 rounded-full px-4 py-3 text-sm text-center text-white placeholder-white/40 focus:outline-none focus:border-rose-500 shadow-inner tracking-widest"
+                autoFocus
+              />
+              <button
+                type="button"
+                onClick={() => setShowPassword(!showPassword)}
+                className="absolute right-4 top-1/2 -translate-y-1/2 text-xs text-white/50 hover:text-white"
+              >
+                {showPassword ? "Hide" : "Show"}
+              </button>
+            </div>
+
             {passError && (
               <span className="text-xs text-rose-500 font-medium">Wrong code! Try again.</span>
             )}
@@ -203,10 +214,10 @@ export default function ChatPage() {
     );
   }
 
-  // সফলভাবে কোড দিয়ে ঢুকলে এই মূল চ্যাট ইন্টারফেস দেখাবে
+  // মূল চ্যাট ইন্টারফেস (এখানে h-[100dvh] ফিক্সটি যুক্ত করা হয়েছে)
   return (
     <main className="min-h-screen bg-slate-950 flex items-center justify-center p-0 sm:p-2 font-sans">
-      <div className={`w-full h-screen sm:w-[380px] sm:h-[750px] sm:rounded-[35px] ${currentTheme.panelBg} backdrop-blur-2xl border ${currentTheme.border} ${currentTheme.glow} flex flex-col relative shadow-2xl overflow-hidden transition-all duration-700`}>
+      <div className={`w-full h-[100dvh] sm:w-[380px] sm:h-[750px] sm:rounded-[35px] ${currentTheme.panelBg} backdrop-blur-2xl border ${currentTheme.border} ${currentTheme.glow} flex flex-col relative shadow-2xl overflow-hidden transition-all duration-700`}>
         
         {/* ব্যাকগ্রাউন্ড ইমেজ ফুল কাভার */}
         <div className="absolute inset-0 z-0 overflow-hidden pointer-events-none">
