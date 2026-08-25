@@ -1,69 +1,298 @@
-import Image from "next/image";
+'use client';
 
-export default function Home() {
-  return (
-    <div className="flex flex-col flex-1 items-center justify-center bg-zinc-50 font-sans dark:bg-black">
-      <main className="flex flex-1 w-full max-w-3xl flex-col items-center justify-between py-32 px-16 bg-white dark:bg-black sm:items-start">
-        <Image
-          className="dark:invert h-5 w-[100px]"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={100}
-          height={20}
-          priority
-        />
-        <div className="flex flex-col items-center gap-6 text-center sm:items-start sm:text-left">
-          <h1 className="max-w-xs text-3xl font-semibold leading-10 tracking-tight text-black dark:text-zinc-50">
-            To get started, edit the{" "}
-            <code className="rounded bg-black/[.06] px-1.5 py-0.5 font-mono text-[0.9em] dark:bg-white/[.08]">
-              page.tsx
-            </code>{" "}
-            file.
-          </h1>
-          <p className="max-w-md text-lg leading-8 text-zinc-600 dark:text-zinc-400">
-            Looking for a starting point or more instructions? Head over to{" "}
-            <a
-              href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Templates
-            </a>{" "}
-            or the{" "}
-            <a
-              href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Learning
-            </a>{" "}
-            center.
-          </p>
-        </div>
-        <div className="flex flex-col gap-4 text-base font-medium sm:flex-row">
-          <a
-            className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-foreground px-5 text-background transition-colors hover:bg-[#383838] dark:hover:bg-[#ccc] md:w-[158px]"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert h-[14px] w-4"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={16}
-              height={14}
+import { useState, useRef, useEffect } from 'react';
+
+interface Message {
+  role: 'user' | 'assistant';
+  content: string;
+}
+
+const themeImages: Record<string, string> = {
+  romantic: "/dipa1.jpeg",
+  cute: "/dipa2.jpeg",
+  passion: "/rafi.jpg",
+  dreamy: "/rafi2.jpg",
+  sunset: "/dipa1.jpeg",
+  royal: "/rafi.jpg",
+  neon: "/dipa2.jpeg",
+  velvet: "/rafi2.jpg"
+};
+
+const themesList = Object.keys(themeImages);
+
+// আপনার গোপন এন্ট্রি কোড এখানে সেট করুন (আপনার ইচ্ছেমতো পরিবর্তন করে নিতে পারেন)
+const SECRET_CODE = "Dipa Nnita"; 
+
+export default function ChatPage() {
+  // এন্ট্রি কোড ভেরিফিকেশনের জন্য স্টেট
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [passcode, setPasscode] = useState('');
+  const [passError, setPassError] = useState(false);
+
+  const [messages, setMessages] = useState<Message[]>([
+    { role: 'assistant', content: "Hi my love! ❤️ How is your day going? Tell me everything!" }
+  ]);
+  const [input, setInput] = useState('');
+  const [loading, setLoading] = useState(false);
+  const [theme, setTheme] = useState<string>('romantic');
+  const messagesEndRef = useRef<HTMLDivElement>(null);
+
+  // ৬ সেকেন্ড পর পর অটোমেটিক থিম ও ছবি পরিবর্তন করার লজিক
+  useEffect(() => {
+    if (!isAuthenticated) return; // লগইন না হলে থিম চেঞ্জ বন্ধ থাকবে
+
+    const interval = setInterval(() => {
+      setTheme((prevTheme) => {
+        const currentIndex = themesList.indexOf(prevTheme);
+        const nextIndex = (currentIndex + 1) % themesList.length;
+        return themesList[nextIndex];
+      });
+    }, 6000);
+
+    return () => clearInterval(interval);
+  }, [isAuthenticated]);
+
+  const panelThemeStyles: Record<string, any> = {
+    romantic: {
+      panelBg: 'bg-rose-950/30',
+      button: 'bg-gradient-to-r from-rose-500 to-pink-600 hover:from-rose-600 hover:to-pink-700',
+      bubbleUser: 'bg-gradient-to-r from-rose-500 to-pink-600 text-white shadow-rose-500/20',
+      bubbleAi: 'bg-slate-900/60 text-rose-100 border border-rose-500/20 backdrop-blur-xl',
+      glow: 'shadow-[0_0_40px_rgba(244,63,94,0.2)]',
+      border: 'border-rose-500/30'
+    },
+    cute: {
+      panelBg: 'bg-purple-950/30',
+      button: 'bg-gradient-to-r from-purple-500 to-fuchsia-600 hover:from-purple-600 hover:to-fuchsia-700',
+      bubbleUser: 'bg-gradient-to-r from-purple-500 to-fuchsia-600 text-white shadow-purple-500/20',
+      bubbleAi: 'bg-slate-900/60 text-purple-100 border border-purple-500/20 backdrop-blur-xl',
+      glow: 'shadow-[0_0_40px_rgba(168,85,247,0.2)]',
+      border: 'border-purple-500/30'
+    },
+    passion: {
+      panelBg: 'bg-red-950/30',
+      button: 'bg-gradient-to-r from-red-600 to-orange-600 hover:from-red-700 hover:to-orange-700',
+      bubbleUser: 'bg-gradient-to-r from-red-600 to-orange-600 text-white shadow-red-500/20',
+      bubbleAi: 'bg-slate-900/60 text-red-100 border border-red-500/20 backdrop-blur-xl',
+      glow: 'shadow-[0_0_40px_rgba(239,68,68,0.2)]',
+      border: 'border-red-500/30'
+    },
+    dreamy: {
+      panelBg: 'bg-blue-950/30',
+      button: 'bg-gradient-to-r from-blue-500 to-cyan-600 hover:from-blue-600 hover:to-cyan-700',
+      bubbleUser: 'bg-gradient-to-r from-blue-500 to-cyan-600 text-white shadow-blue-500/20',
+      bubbleAi: 'bg-slate-900/60 text-blue-100 border border-blue-500/20 backdrop-blur-xl',
+      glow: 'shadow-[0_0_40px_rgba(59,130,246,0.2)]',
+      border: 'border-blue-500/30'
+    },
+    sunset: {
+      panelBg: 'bg-amber-950/30',
+      button: 'bg-gradient-to-r from-amber-500 to-rose-600 hover:from-amber-600 hover:to-rose-700',
+      bubbleUser: 'bg-gradient-to-r from-amber-500 to-rose-600 text-white shadow-amber-500/20',
+      bubbleAi: 'bg-slate-900/60 text-amber-100 border border-amber-500/20 backdrop-blur-xl',
+      glow: 'shadow-[0_0_40px_rgba(245,158,11,0.2)]',
+      border: 'border-amber-500/30'
+    },
+    royal: {
+      panelBg: 'bg-indigo-950/30',
+      button: 'bg-gradient-to-r from-indigo-600 to-violet-700 hover:from-indigo-700 hover:to-violet-800',
+      bubbleUser: 'bg-gradient-to-r from-indigo-600 to-violet-700 text-white shadow-indigo-500/20',
+      bubbleAi: 'bg-slate-900/60 text-indigo-100 border border-indigo-500/20 backdrop-blur-xl',
+      glow: 'shadow-[0_0_40px_rgba(99,102,241,0.2)]',
+      border: 'border-indigo-500/30'
+    },
+    neon: {
+      panelBg: 'bg-emerald-950/30',
+      button: 'bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700',
+      bubbleUser: 'bg-gradient-to-r from-emerald-500 to-teal-600 text-white shadow-emerald-500/20',
+      bubbleAi: 'bg-slate-900/60 text-emerald-100 border border-emerald-500/20 backdrop-blur-xl',
+      glow: 'shadow-[0_0_40px_rgba(16,185,129,0.2)]',
+      border: 'border-emerald-500/30'
+    },
+    velvet: {
+      panelBg: 'bg-fuchsia-950/30',
+      button: 'bg-gradient-to-r from-pink-600 to-purple-700 hover:from-pink-700 hover:to-purple-800',
+      bubbleUser: 'bg-gradient-to-r from-pink-600 to-purple-700 text-white shadow-fuchsia-500/20',
+      bubbleAi: 'bg-slate-900/60 text-fuchsia-100 border border-fuchsia-500/20 backdrop-blur-xl',
+      glow: 'shadow-[0_0_40px_rgba(217,70,239,0.2)]',
+      border: 'border-fuchsia-500/30'
+    }
+  };
+
+  const currentTheme = panelThemeStyles[theme] || panelThemeStyles.romantic;
+
+  useEffect(() => {
+    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  }, [messages, loading]);
+
+  const handleLogin = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (passcode === SECRET_CODE) {
+      setIsAuthenticated(true);
+      setPassError(false);
+    } else {
+      setPassError(true);
+    }
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!input.trim() || loading) return;
+
+    const userMessage = input.trim();
+    setInput('');
+    const newMessages = [...messages, { role: 'user' as const, content: userMessage }];
+    setMessages(newMessages);
+    setLoading(true);
+
+    try {
+      const res = await fetch('/api/chat', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ messages: newMessages }),
+      });
+
+      const data = await res.json();
+      setMessages([...newMessages, { role: 'assistant', content: data.reply }]);
+      
+      if (data.theme && panelThemeStyles[data.theme]) {
+        setTheme(data.theme);
+      }
+    } catch (err) {
+      setMessages([
+        ...newMessages,
+        { role: 'assistant', content: "Aww, my heart skipped a beat! Tell me again, sweetie? 💕" },
+      ]);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // যদি ইউজার এন্ট্রি কোড না দিয়ে থাকে, তবে পাসওয়ার্ড স্ক্রিন দেখাবে
+  if (!isAuthenticated) {
+    return (
+      <main className="min-h-screen bg-slate-950 flex items-center justify-center p-2 font-sans">
+        <div className="w-full sm:w-[380px] p-6 bg-slate-900/80 backdrop-blur-2xl border border-rose-500/30 rounded-[35px] shadow-2xl flex flex-col items-center text-center">
+          <div className="w-16 h-16 rounded-full bg-rose-500/20 border border-rose-500/40 flex items-center justify-center text-2xl mb-4 text-rose-400">
+            🔒
+          </div>
+          <h2 className="text-white font-bold text-lg mb-1">Enter Secret Code</h2>
+          <p className="text-xs text-white/60 mb-6">Please enter your code to access the chat.</p>
+
+          <form onSubmit={handleLogin} className="w-full flex flex-col gap-3">
+            <input
+              type="password"
+              value={passcode}
+              onChange={(e) => setPasscode(e.target.value)}
+              placeholder="Enter passcode..."
+              className="w-full bg-slate-950/80 border border-white/20 rounded-full px-4 py-3 text-sm text-center text-white placeholder-white/40 focus:outline-none focus:border-rose-500 shadow-inner tracking-widest"
+              autoFocus
             />
-            Deploy Now
-          </a>
-          <a
-            className="flex h-12 w-full items-center justify-center rounded-full border border-solid border-black/[.08] px-5 transition-colors hover:border-transparent hover:bg-black/[.04] dark:border-white/[.145] dark:hover:bg-[#1a1a1a] md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Documentation
-          </a>
+            {passError && (
+              <span className="text-xs text-rose-500 font-medium">Wrong code! Try again.</span>
+            )}
+            <button
+              type="submit"
+              className="w-full mt-2 py-3 rounded-full bg-gradient-to-r from-rose-500 to-pink-600 text-white font-bold text-sm shadow-lg hover:opacity-90 active:scale-95 transition-all"
+            >
+              Unlock Chat ✨
+            </button>
+          </form>
         </div>
       </main>
-    </div>
+    );
+  }
+
+  // সফলভাবে কোড দিয়ে ঢুকলে এই মূল চ্যাট ইন্টারফেস দেখাবে
+  return (
+    <main className="min-h-screen bg-slate-950 flex items-center justify-center p-0 sm:p-2 font-sans">
+      <div className={`w-full h-screen sm:w-[380px] sm:h-[750px] sm:rounded-[35px] ${currentTheme.panelBg} backdrop-blur-2xl border ${currentTheme.border} ${currentTheme.glow} flex flex-col relative shadow-2xl overflow-hidden transition-all duration-700`}>
+        
+        {/* ব্যাকগ্রাউন্ড ইমেজ ফুল কাভার */}
+        <div className="absolute inset-0 z-0 overflow-hidden pointer-events-none">
+          <img 
+            src={themeImages[theme]} 
+            alt="Mobile View Background" 
+            className="w-full h-full object-fill opacity-65 filter blur-[1px] transition-all duration-1000"
+          />
+          <div className="absolute inset-0 bg-slate-950/40 backdrop-blur-[0.5px]"></div>
+        </div>
+
+        {/* Header */}
+        <div className="py-2.5 px-4 bg-slate-950/60 backdrop-blur-2xl border-b border-white/10 flex items-center justify-between z-10 shrink-0">
+          <div className="flex items-center gap-2.5">
+            <div className="relative">
+              <img 
+                src={themeImages[theme]} 
+                alt="AI Partner" 
+                className="w-10 h-10 rounded-full object-cover border-2 border-white/40 shadow-md transition-all duration-500"
+              />
+              <span className="absolute bottom-0 right-0 w-3 h-3 bg-emerald-500 border-2 border-slate-950 rounded-full animate-pulse"></span>
+            </div>
+            <div>
+              <h1 className="text-white font-bold text-sm tracking-wide flex items-center gap-1 drop-shadow">
+                My Love AI ✨
+              </h1>
+              <p className="text-[11px] text-emerald-400 font-medium capitalize">Mood: {theme}</p>
+            </div>
+          </div>
+          <div className="px-2.5 py-0.5 rounded-full bg-white/20 border border-white/10 text-[9px] font-bold uppercase tracking-wider text-white shadow">
+            {theme}
+          </div>
+        </div>
+
+        {/* Messages Container */}
+        <div className="flex-1 overflow-y-auto p-3 space-y-3 flex flex-col z-10">
+          {messages.map((msg, index) => (
+            <div key={index} className={`flex items-end gap-2 ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
+              
+              {msg.role === 'assistant' && (
+                <img 
+                  src={themeImages[theme]} 
+                  alt="Avatar" 
+                  className="w-6 h-6 rounded-full object-cover border border-white/30 shrink-0 mb-1 shadow-sm"
+                />
+              )}
+
+              <div className={`max-w-[80%] px-3.5 py-2.5 rounded-2xl text-xs leading-relaxed shadow-lg ${
+                  msg.role === 'user'
+                    ? `${currentTheme.bubbleUser} rounded-br-sm`
+                    : `${currentTheme.bubbleAi} rounded-bl-sm`
+                }`}>
+                {msg.content}
+              </div>
+            </div>
+          ))}
+
+          {loading && (
+            <div className="flex items-center gap-2 text-white/90 text-xs pl-2 italic z-10 font-medium">
+               <span>Typing sweet words...</span>
+            </div>
+          )}
+          <div ref={messagesEndRef} className="h-2" />
+        </div>
+
+        {/* Footer Input */}
+        <div className="p-3 bg-slate-950/60 backdrop-blur-2xl border-t border-white/10 z-10 shrink-0">
+          <form onSubmit={handleSubmit} className="flex items-center gap-2">
+            <input
+              type="text"
+              value={input}
+              onChange={(e) => setInput(e.target.value)}
+              placeholder="Type your message..."
+              className="flex-1 bg-slate-900/80 border border-white/20 rounded-full px-3.5 py-2.5 text-xs text-white placeholder-white/60 focus:outline-none focus:border-rose-400 shadow-inner"
+            />
+            <button
+              type="submit"
+              disabled={loading || !input.trim()}
+              className={`w-9 h-9 rounded-full ${currentTheme.button} text-white flex items-center justify-center shadow-md disabled:opacity-50 shrink-0 font-bold text-xs transition-transform active:scale-95`}
+            >
+              ➤
+            </button>
+          </form>
+        </div>
+
+      </div>
+    </main>
   );
 }
