@@ -1,67 +1,47 @@
 import { NextResponse } from 'next/server';
+import { assess, validate, type LoanInputs } from '../../../lib/loan';
+import { generate, type GeminiTurn } from '../../../lib/gemini';
+
+interface ChatMsg {
+  role: 'user' | 'assistant';
+  content: string;
+}
 
 export async function POST(req: Request) {
+  let body: { messages?: ChatMsg[]; inputs?: unknown; lang?: string };
   try {
-    const { messages } = await req.json();
-    const lastMessage = messages[messages.length - 1].content;
-    const apiKey = process.env.GEMINI_API_KEY;
+    body = await req.json();
+  } catch {
+    return NextResponse.json({ error: 'Invalid request.' }, { status: 400 });
+  }
 
-    if (!apiKey) {
-      return NextResponse.json({ reply: "API Key is missing, my love! ❤️", theme: "romantic" }, { status: 500 });
-    }
+  const error = validate(body.inputs);
+  if (error) return NextResponse.json({ error }, { status: 400 });
 
-    const prompt = `You are a sweet, loving, and romantic AI companion for a girlfriend. 
-    Analyze the user message: "${lastMessage}".
-    Respond back in strict JSON format with two keys:
-    1. "reply": Your loving, sweet response to her.
-    2. "theme": One of these exact keywords based on the mood: "romantic", "cute", "passion", "dreamy".
-    
-    Example format: {"reply": "I love you so much!", "theme": "romantic"}`;
+  const inputs = body.inputs as LoanInputs;
+  const result = assess(inputs); // recomputed on the server, the client result is never trusted
+  const lang = body.lang === 'bn' ? 'Bangla (Bengali script)' : 'English';
 
-    // জেমিনির কথামতো এখানে gemini-3.6-flash মডেল ব্যবহার করা হয়েছে
-    const apiRes = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-3.6-flash:generateContent?key=${apiKey}`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        contents: [{ parts: [{ text: prompt }] }]
-      })
-    });
+  // keep the last 8 turns, each capped, and make sure the conversation starts with a user turn
+  const turns: GeminiTurn[] = (Array.isArray(body.messages) ? body.messages : [])
+    .filter((m) => m && (m.role === 'user' || m.role === 'assistant') && typeof m.content === 'string' && m.content.trim())
+    .slice(-8)
+    .map((m) => ({ role: m.role === 'user' ? 'user' : 'model', parts: [{ text: m.content.slice(0, 600) }] }));
+  while (turns.length && turns[0].role !== 'user') turns.shift();
+  if (!turns.length) return NextResponse.json({ error: 'Ask a question first.' }, { status: 400 });
 
-    const data = await apiRes.json();
-    
-    if (data.error) {
-      console.error("Gemini API Error:", data.error);
-      return NextResponse.json({
-        reply: data.error.message || "Aww, my heart is warming up for you! Tell me again? 💕",
-        theme: "romantic"
-      });
-    }
+  const system =
+    'You are HomeLoan AI, a friendly assistant that answers follow-up questions about a house-loan approval estimate in Bangladesh. ' +
+    'Use only the figures below. Do not recalculate the score or invent numbers. ' +
+    "If asked about a specific bank's current rate, fee or policy, say you cannot verify it and suggest checking with the bank. " +
+    'This is an estimate, not financial advice and not a bank decision. Keep answers under 120 words. ' +
+    `Reply in ${lang}.\n\nBorrower data:\n${JSON.stringify({ inputs, result }, null, 2)}`;
 
-    const textResponse = data.candidates?.[0]?.content?.parts?.[0]?.text || '';
-    
-    let jsonResult;
-    try {
-      const cleanedText = textResponse.replace(/```json/gi, '').replace(/```/g, '').trim();
-      const jsonStartIndex = cleanedText.indexOf('{');
-      const jsonEndIndex = cleanedText.lastIndexOf('}');
-      const finalJsonString = (jsonStartIndex !== -1 && jsonEndIndex !== -1) 
-        ? cleanedText.substring(jsonStartIndex, jsonEndIndex + 1) 
-        : cleanedText;
-
-      jsonResult = JSON.parse(finalJsonString);
-    } catch (e) {
-      jsonResult = {
-        reply: textResponse || "I am always here for you, my love! ❤️",
-        theme: "romantic"
-      };
-    }
-
-    return NextResponse.json(jsonResult);
-  } catch (error) {
-    console.error('Error:', error);
-    return NextResponse.json(
-      { reply: "Aww, my heart skipped a beat! Tell me again, sweetie? 💕", theme: "romantic" },
-      { status: 500 }
-    );
+  try {
+    const reply = await generate({ system, contents: turns, temperature: 0.5 });
+    return NextResponse.json({ reply: reply || '...' });
+  } catch (e) {
+    console.error('Gemini chat failed:', e);
+    return NextResponse.json({ error: 'The AI assistant is not available right now. Please try again.' }, { status: 502 });
   }
 }
